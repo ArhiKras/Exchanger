@@ -35,7 +35,7 @@ def register_common_handlers(dp):
     async def show_main_menu(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await callback.message.edit_text(
-            "🏠 <b>Главное меню</b>\n\n"
+            "🏠 Главное меню\n\n"
             "Выбери действие:",
             reply_markup=get_main_menu()
         )

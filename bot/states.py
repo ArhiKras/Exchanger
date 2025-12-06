@@ -17,3 +17,8 @@ class RateChange(StatesGroup):
     """Состояния изменения курса"""
     waiting_new_rate = State()
 
+
+class ExpenseComment(StatesGroup):
+    """Состояния комментирования расхода"""
+    waiting_comment = State()
+

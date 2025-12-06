@@ -25,9 +25,15 @@ def convert_currency_api(amount: float, from_currency: str, to_currency: str) ->
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         
+        # Логируем ответ для отладки
+        print(f"API Response: {data}")
+        
         if data.get("success"):
             return data
         else:
+            # Логируем ошибку API
+            error_info = data.get("error", {})
+            print(f"API Error: {error_info}")
             return None
             
     except Exception as e:
@@ -40,8 +46,18 @@ def get_exchange_rate(from_currency: str, to_currency: str) -> Optional[float]:
     Получить текущий курс обмена между двумя валютами
     """
     result = convert_currency_api(1, from_currency, to_currency)
-    if result and "info" in result and "rate" in result["info"]:
-        return result["info"]["rate"]
+    if result:
+        # Проверяем разные варианты структуры ответа
+        if "info" in result:
+            # Вариант 1: info.rate
+            if "rate" in result["info"]:
+                return result["info"]["rate"]
+            # Вариант 2: info.quote
+            if "quote" in result["info"]:
+                return result["info"]["quote"]
+        # Вариант 3: result напрямую
+        if "result" in result:
+            return result["result"]
     return None
 
 
@@ -78,7 +94,7 @@ def format_trip_info(trip: Dict[str, Any]) -> str:
     """
     Форматировать информацию о путешествии
     """
-    info = f"🌍 <b>{trip['from_country']} → {trip['to_country']}</b>\n\n"
+    info = f"🌍 {trip['from_country']} → {trip['to_country']}\n\n"
     info += f"💱 Курс: 1 {trip['from_currency']} = {trip['exchange_rate']:.4f} {trip['to_currency']}\n\n"
     info += f"💼 Начальная сумма:\n"
     info += f"   {format_amount(trip['initial_amount_from'], trip['from_currency'])}\n"
@@ -95,9 +111,9 @@ def format_expense_history(expenses: list, trip: Dict[str, Any]) -> str:
     Форматировать историю расходов
     """
     if not expenses:
-        return "📊 <b>История расходов</b>\n\nРасходов пока нет."
+        return "📊 История расходов\n\nРасходов пока нет."
     
-    text = f"📊 <b>История расходов</b>\n"
+    text = f"📊 История расходов\n"
     text += f"🌍 {trip['from_country']} → {trip['to_country']}\n\n"
     
     total_to = 0
@@ -119,7 +135,7 @@ def format_expense_history(expenses: list, trip: Dict[str, Any]) -> str:
     if len(expenses) > 20:
         text += f"... и ещё {len(expenses) - 20} расходов\n\n"
     
-    text += f"<b>Всего потрачено:</b>\n"
+    text += f"Всего потрачено:\n"
     text += f"{format_amount(total_to, trip['to_currency'])} = "
     text += f"{format_amount(total_from, trip['from_currency'])}"
     

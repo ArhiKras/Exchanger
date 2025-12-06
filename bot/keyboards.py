@@ -19,6 +19,9 @@ def get_yes_no_keyboard(expense_data: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="✅ Да", callback_data=f"expense_yes:{expense_data}"),
+            InlineKeyboardButton(text="💬 Добавить комментарий", callback_data=f"expense_comment:{expense_data}")
+        ],
+        [
             InlineKeyboardButton(text="❌ Нет", callback_data="expense_no")
         ]
     ])

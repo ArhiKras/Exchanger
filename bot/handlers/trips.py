@@ -52,12 +52,10 @@ def register_trip_handlers(dp):
         """Начало создания путешествия"""
         await state.clear()
         
-        countries_list = "\n".join([f"• {country}" for country in sorted(COUNTRY_CURRENCY_MAP.keys())])
         text = (
-            "🌍 <b>Создание нового путешествия</b>\n\n"
-            "Введи страну отправления (откуда едешь):\n\n"
-            f"{countries_list}\n\n"
-            "Или введи название своей страны."
+            "🌍 Создание нового путешествия\n\n"
+            "Введи страну отправления (откуда едешь):\n"
+            "Например: Россия, США, Турция, Таиланд и т.д."
         )
         
         if isinstance(event, types.CallbackQuery):
@@ -77,18 +75,17 @@ def register_trip_handlers(dp):
         if not from_currency:
             await message.answer(
                 f"❌ Не удалось определить валюту для страны '{from_country}'.\n\n"
-                "Попробуй выбрать из списка или напиши название точнее.",
+                "Попробуй написать название точнее, например: Россия, Турция, Таиланд",
                 reply_markup=get_cancel_keyboard()
             )
             return
         
         await state.update_data(from_country=from_country, from_currency=from_currency)
         
-        countries_list = "\n".join([f"• {country}" for country in sorted(COUNTRY_CURRENCY_MAP.keys())])
         await message.answer(
             f"✅ Отлично! Валюта отправления: {from_currency}\n\n"
-            "Теперь введи страну назначения (куда едешь):\n\n"
-            f"{countries_list}",
+            "Теперь введи страну назначения (куда едешь):\n"
+            "Например: Турция, Таиланд, ОАЭ, Китай и т.д.",
             reply_markup=get_cancel_keyboard()
         )
         
@@ -103,7 +100,7 @@ def register_trip_handlers(dp):
         if not to_currency:
             await message.answer(
                 f"❌ Не удалось определить валюту для страны '{to_country}'.\n\n"
-                "Попробуй выбрать из списка или напиши название точнее.",
+                "Попробуй написать название точнее.",
                 reply_markup=get_cancel_keyboard()
             )
             return
@@ -124,11 +121,20 @@ def register_trip_handlers(dp):
         rate = get_exchange_rate(from_currency, to_currency)
         
         if rate is None:
+            # Если API не работает, предлагаем ввести курс вручную
+            await state.update_data(
+                to_country=to_country, 
+                to_currency=to_currency, 
+                api_rate=None
+            )
+            
             await message.answer(
-                "❌ Не удалось получить курс обмена от API.\n"
-                "Попробуй позже или введи курс вручную.",
+                "⚠️ Не удалось получить курс обмена от API.\n\n"
+                f"Введи курс обмена вручную.\n"
+                f"Например, если 1 {from_currency} = 15.5 {to_currency}, просто напиши: 15.5",
                 reply_markup=get_cancel_keyboard()
             )
+            await state.set_state(TripCreation.waiting_manual_rate)
             return
         
         await state.update_data(
@@ -138,7 +144,7 @@ def register_trip_handlers(dp):
         )
         
         await message.answer(
-            f"💱 <b>Текущий курс обмена:</b>\n\n"
+            f"💱 Текущий курс обмена:\n\n"
             f"1 {from_currency} = {rate:.4f} {to_currency}\n\n"
             f"Этот курс тебе подходит?",
             reply_markup=get_rate_confirmation_keyboard()
@@ -240,7 +246,7 @@ def register_trip_handlers(dp):
         )
         
         await message.answer(
-            f"🎉 <b>Путешествие создано!</b>\n\n"
+            f"🎉 Путешествие создано!\n\n"
             f"🌍 {data['from_country']} → {data['to_country']}\n"
             f"💱 Курс: 1 {data['from_currency']} = {data['exchange_rate']:.4f} {data['to_currency']}\n\n"
             f"💼 Твой стартовый баланс:\n"
@@ -269,7 +275,7 @@ def register_trip_handlers(dp):
             active_trip = get_active_trip(user_id)
             active_trip_id = active_trip['trip_id'] if active_trip else None
             
-            text = "✈️ <b>Твои путешествия</b>\n\nВыбери путешествие для просмотра:"
+            text = "✈️ Твои путешествия\n\nВыбери путешествие для просмотра:"
             keyboard = get_trips_keyboard(trips, active_trip_id)
         
         if isinstance(event, types.CallbackQuery):
@@ -316,7 +322,7 @@ def register_trip_handlers(dp):
             return
         
         text = (
-            f"💰 <b>Баланс путешествия</b>\n\n"
+            f"💰 Баланс путешествия\n\n"
             f"🌍 {trip['from_country']} → {trip['to_country']}\n\n"
             f"{format_balance(trip['current_balance_to'], trip['to_currency'], trip['current_balance_from'], trip['from_currency'])}"
         )
@@ -355,7 +361,7 @@ def register_trip_handlers(dp):
         await state.update_data(trip_id=trip_id)
         
         await callback.message.edit_text(
-            f"💱 <b>Изменение курса</b>\n\n"
+            f"💱 Изменение курса\n\n"
             f"🌍 {trip['from_country']} → {trip['to_country']}\n"
             f"Текущий курс: 1 {trip['from_currency']} = {trip['exchange_rate']:.4f} {trip['to_currency']}\n\n"
             f"Введи новый курс обмена:",
@@ -376,7 +382,7 @@ def register_trip_handlers(dp):
             return
         
         await callback.message.edit_text(
-            f"⚠️ <b>Удаление путешествия</b>\n\n"
+            f"⚠️ Удаление путешествия\n\n"
             f"🌍 {trip['from_country']} → {trip['to_country']}\n\n"
             f"Ты уверен? Все данные будут удалены безвозвратно!",
             reply_markup=get_confirm_delete_keyboard(trip_id)
@@ -407,7 +413,7 @@ def register_trip_handlers(dp):
             keyboard = get_main_menu()
         else:
             text = (
-                f"💰 <b>Текущий баланс</b>\n\n"
+                f"💰 Текущий баланс\n\n"
                 f"🌍 {trip['from_country']} → {trip['to_country']}\n\n"
                 f"{format_balance(trip['current_balance_to'], trip['to_currency'], trip['current_balance_from'], trip['from_currency'])}\n\n"
                 f"💱 Курс: 1 {trip['from_currency']} = {trip['exchange_rate']:.4f} {trip['to_currency']}"
@@ -466,7 +472,7 @@ def register_trip_handlers(dp):
         await state.update_data(trip_id=trip['trip_id'])
         
         text = (
-            f"💱 <b>Изменение курса</b>\n\n"
+            f"💱 Изменение курса\n\n"
             f"🌍 {trip['from_country']} → {trip['to_country']}\n"
             f"Текущий курс: 1 {trip['from_currency']} = {trip['exchange_rate']:.4f} {trip['to_currency']}\n\n"
             f"Введи новый курс обмена:"
@@ -499,7 +505,7 @@ def register_trip_handlers(dp):
         trip = get_trip_by_id(trip_id)
         
         await message.answer(
-            f"✅ <b>Курс обновлён!</b>\n\n"
+            f"✅ Курс обновлён!\n\n"
             f"🌍 {trip['from_country']} → {trip['to_country']}\n"
             f"Новый курс: 1 {trip['from_currency']} = {rate:.4f} {trip['to_currency']}",
             reply_markup=get_main_menu()
